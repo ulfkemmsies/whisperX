@@ -184,6 +184,10 @@ class FasterWhisperPipeline(Pipeline):
                 yield {'inputs': audio[f1:f2]}
 
         vad_segments = self.vad_model({"waveform": torch.from_numpy(audio).unsqueeze(0), "sample_rate": SAMPLE_RATE})
+
+        if len(vad_segments) == 0:
+            return {"segments": [], "language": language}
+
         vad_segments = merge_chunks(
             vad_segments,
             chunk_size,
@@ -203,7 +207,7 @@ class FasterWhisperPipeline(Pipeline):
                 self.tokenizer = faster_whisper.tokenizer.Tokenizer(self.model.hf_tokenizer,
                                                                     self.model.model.is_multilingual, task=task,
                                                                     language=language)
-                
+
         if self.suppress_numerals:
             previous_suppress_tokens = self.options.suppress_tokens
             numeral_symbol_tokens = find_numeral_symbol_tokens(self.tokenizer)
@@ -290,6 +294,7 @@ def load_model(whisper_arch,
                          device_index=device_index,
                          compute_type=compute_type,
                          download_root=download_root,
+                         local_files_only=True,
                          cpu_threads=threads)
     if language is not None:
         tokenizer = faster_whisper.tokenizer.Tokenizer(model.hf_tokenizer, model.model.is_multilingual, task=task, language=language)
